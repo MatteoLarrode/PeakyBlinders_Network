@@ -34,6 +34,7 @@ peaky_network <- set_vertex_attr(
 
 peaky_network
 ```
+
 And we can produce an initial plot!
 
 ```{r}

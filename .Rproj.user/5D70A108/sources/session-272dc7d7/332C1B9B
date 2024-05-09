@@ -3,7 +3,7 @@
     "path": "~/Documents/UCL/Year 3/Social_Networks_SOCS0081/Assessments/PeakyBlinders_Network/peakyBlinders_network-part2.Rmd",
     "project_path": "peakyBlinders_network-part2.Rmd",
     "type": "r_markdown",
-    "hash": "0",
+    "hash": "1374807083",
     "contents": "",
     "dirty": false,
     "created": 1715270324587.0,
@@ -12,15 +12,15 @@
     "properties": {
         "source_window_id": "",
         "Source": "Source",
-        "cursorPosition": "13,0",
-        "scrollLine": "0"
+        "cursorPosition": "37,0",
+        "scrollLine": "14"
     },
     "folds": "",
-    "lastKnownWriteTime": 1715270353,
+    "lastKnownWriteTime": 1715270757,
     "encoding": "UTF-8",
     "collab_server": "",
     "source_window": "",
-    "last_content_update": 1715270353619,
+    "last_content_update": 1715270757178,
     "read_only": false,
     "read_only_alternatives": []
 }
