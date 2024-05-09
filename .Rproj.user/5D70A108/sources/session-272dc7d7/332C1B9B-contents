@@ -1,0 +1,58 @@
+---
+title: "Peaky Blinders Network Analysis"
+author: "Matteo Larrode"
+date: "2024-12-05"
+output: html_document
+---
+
+# Peaky Blinders Network Analysis (Part 2)
+
+```{r message=FALSE, warning=FALSE}
+library(igraph)
+library(tidyverse)
+```
+
+First, let's load the adjacency matrix of character interactions created previously. 
+```{r}
+peaky_df <- readRDS("cooccurrence_df.rds")
+
+peaky_adj_mat <- as.matrix(peaky_df)
+# no self-links
+diag(peaky_adj_mat) <- 0
+```
+
+Now, we can create the network from the adjacency matrix:
+```{r}
+peaky_network <- graph_from_adjacency_matrix(peaky_adj_mat,
+                                            mode = "undirected",
+                                            weighted = TRUE) 
+peaky_network <- set_vertex_attr(
+  peaky_network, 
+  "name_edited", 
+  value = str_to_title(str_replace_all(V(peaky_network)$name, "_", " "))
+)
+
+peaky_network
+```
+And we can produce an initial plot!
+
+```{r}
+set.seed(10)
+layout2 <- layout_with_kk(peaky_network)
+layout4 <- layout_with_lgl(peaky_network)
+
+plot.igraph(peaky_network, 
+            edge.color="gray",
+            edge.curved=.1,
+            edge.width= 1+E(peaky_network)$weight/15, 
+            vertex.size = 3+degree(peaky_network)/3, 
+            vertex.frame.color="#555555",
+            vertex.label = V(peaky_network)$name_edited,
+            vertex.color = "#FBD87F",
+            vertex.label.color="black",
+            vertex.label.cex=1+betweenness(peaky_network, weights = NA)/1000,  
+            margin=c(0,0,0,0) , 
+            asp=0, 
+            layout=layout4,
+            main = "Network of Peaky Blinders (Seasons 1-6)")
+```
