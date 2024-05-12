@@ -1,0 +1,25 @@
+"0","birmingham <- c("
+"0","  ""Finn"", ""Arthur"", ""Thomas"", ""Freddie"", ""Danny"", ""Polly"", ""Ada"","
+"0","  ""Charlie"", ""John"", ""Curly"", ""Jeremiah"", ""Lizzie"", ""Michael"", ""Esme"","
+"0","  ""Karl"", ""Linda"", ""Aberama"", ""Bonnie"", ""Isiah"""
+"0",")"
+"0",""
+"0","london <- c(""Churchill"", ""May"", ""Alfie"", ""Sabini"", ""Mitford"", ""Oswald Mosley"")"
+"0",""
+"0","chr_origin_city <- data.frame("
+"0","  name_edited = V(peaky_network)$name_edited,"
+"0","  origin_city = case_when("
+"0","    name_edited %in% birmingham ~ ""Birmingham"","
+"0","    name_edited %in% london ~ ""London"","
+"0","    name_edited %in% new_york ~ ""New York"","
+"0","    TRUE ~ ""Unknown"""
+"0","  )"
+"0",")"
+"1","[1m[33mError[39m in `case_when()`:[22m
+[38;5;232m[33m![38;5;232m Failed to evaluate the left-hand side of formula 1.[39m
+[1mCaused by error:[22m
+[33m![39m object 'name_edited' not found
+Backtrace:
+[90m 1. [39m[1mbase[22m::data.frame(...)
+[90m 6. [39mname_edited %in% birmingham
+"

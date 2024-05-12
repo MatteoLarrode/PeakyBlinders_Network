@@ -1,0 +1,7 @@
+"0",""
+"0","text(0.7, -1,"
+"0","  paste0(""Modularity: "", round(modularity(peaky_network, membership = origin_membership), 3)),"
+"0","  cex = 1.2,"
+"0","  col = ""black"","
+"0","  font = 2"
+"0",")"

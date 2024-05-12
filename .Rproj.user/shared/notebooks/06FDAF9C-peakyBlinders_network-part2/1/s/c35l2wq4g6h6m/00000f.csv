@@ -1,0 +1,5 @@
+"0","peaky_df <- readRDS(""data/cooccurrence_df.rds"")"
+"0",""
+"0","peaky_adj_mat <- as.matrix(peaky_df)"
+"0","# no self-links"
+"0","diag(peaky_adj_mat) <- 0"

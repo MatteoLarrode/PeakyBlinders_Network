@@ -1,0 +1,216 @@
+# ============================================
+# ---- NETWORK VISUALISATION AND ANALYSIS ----
+# ============================================
+
+# ---- Setup ----
+library(igraph)
+library(tidyverse)
+library(countrycode)
+
+ingo_network <- readRDS("ingo_network.rds")
+
+# ---- Prepare the Network for Visualisation ----
+# Add country names for plotting
+codelist <- countrycode::codelist |> 
+  select(cowc, country.name.en, unicode.symbol) |> 
+  mutate(cowc = ifelse(country.name.en == "South Sudan", "SOSUD", cowc))
+
+# Set 'full_name' attribute for each vertex in the igraph object
+for(i in 1:length(V(ingo_network)$name)) {
+  # Pull the matching name in the lookup table
+  full_name <- codelist |> 
+    filter(cowc == V(ingo_network)$name[i]) |> 
+    pull(country.name.en)
+  
+  flag <- codelist |> 
+    filter(cowc == V(ingo_network)$name[i]) |> 
+    pull(unicode.symbol)
+  
+  if(length(full_name) > 0){
+    V(ingo_network)$full_name[i] <- full_name
+  }
+  
+  if(length(flag) > 0){
+    V(ingo_network)$flag[i] <- flag
+  }
+  
+  rm(full_name, flag)
+}
+
+# Keep edges that have a minimum weight of 2
+ingo_network_reduced <- delete_edges(ingo_network, which(E(ingo_network)$weight < 2))
+
+# ---- Visualisation ----
+set.seed(1)
+
+# Create good layout for visualisation
+layout1 <- layout_with_lgl(ingo_network_reduced)
+# layout2 <- layout_with_graphopt(ingo_network_reduced)
+
+# Create label size by normalising betweenness
+scaled_betweenness <- log1p(betweenness(ingo_network, weights = NA))
+vertex_label_cex <- (scaled_betweenness + .5) / max(scaled_betweenness)
+
+plot.igraph(ingo_network_reduced,
+            edge.color="gray",
+            edge.curved=.1,
+            # Edge width: based on weight
+            edge.width= 1+E(ingo_network)$weight/15,
+            # Node size: based on (unweighted) degree
+            vertex.size = degree(ingo_network)/20,
+            # Label size: based on betweenness
+            vertex.label.cex = vertex_label_cex,
+            vertex.label = V(ingo_network)$full_name,
+            vertex.frame.color="#555555",
+            vertex.color = "#FBD87F",
+            vertex.label.color = "black", 
+            margin=c(0,0,0,0) ,
+            asp=0,
+            layout=layout1,
+            main = "Network of Joint Memberships to International Organisations (1990-2014)")
+
+# ---- Characteristics of the Network ----
+# Number of nodes and edges
+summary(ingo_network_reduced)
+
+# Density
+paste0("Density of the original network: ", edge_density(ingo_network))
+paste0("Density of the reduced network: ", edge_density(ingo_network_reduced))
+
+# Diameter
+paste0("Diameter of the original network: ", diameter(ingo_network))
+paste0("Diameter of the reduced network: ", diameter(ingo_network_reduced))
+
+# Shortest paths
+geodesics_df <- shortest.paths(ingo_network_reduced)
+
+# ---- Characteristics of the Nodes ----
+centr_df <- tibble(
+  V(ingo_network_reduced)$full_name,
+  degree(ingo_network_reduced),
+  strength(ingo_network_reduced),
+  eigen_centrality(ingo_network_reduced)$vector,
+  betweenness(ingo_network_reduced, weights = NA, directed = FALSE, normalized = TRUE)
+)
+
+names(centr_df) <- c(
+  "Country",
+  "Degree",
+  "Weighted Degree",
+  "Eigenvector",
+  "Betweenness \n(normalised)"
+)
+
+countries_toselect <- c(
+  "Kenya", "Egypt", "Canada", "Pakistan", "Mexico", "Turkey", "Portugal",
+  "United Kingdom", "Colombia", "Spain", "Australia", "Venezuela"
+)
+
+centr_subset_df <- centr_df |>
+  filter(Country %in% countries_toselect) |>
+  arrange(match(Country, countries_toselect)) |>
+  pivot_longer(-Country, names_to = "metric", values_to = "value") |>
+  group_by(metric) |>
+  arrange(desc(value)) |>
+  mutate(order = row_number()) |>
+  mutate(Country = factor(Country, levels = countries_toselect)) |>
+  ungroup() |>
+  mutate(metric = factor(
+    metric,
+    levels = c("Country", "Degree", "Weighted Degree", "Eigenvector", "Betweenness \n(normalised)")
+  ))
+
+# Visualisation
+centr_subset_df |>
+  ggplot(aes(Country, value, fill = metric)) +
+  geom_bar(stat ="identity") +
+  facet_grid(~ metric, scales = "free", shrink = TRUE) + 
+  coord_flip() +
+  geom_label(aes(label = order), size = 4) +
+  scale_x_discrete(limits = rev(levels(centr_subset_df$Country))) + 
+  theme_minimal()+
+  theme(plot.title = element_blank(),
+        axis.title.x = element_blank(),
+        axis.text.x = element_text(size = 11),
+        strip.text = element_text(size = 16, face = "bold"), 
+        axis.title.y = element_blank(),
+        axis.text.y = element_text(size = 14), 
+        panel.spacing.x = unit(6, "mm"),
+        legend.position = "none")
+
+# ---- Communities in the Network ----
+par(mfrow = c(1, 2), mai = c(1, 0.1, 0.1, 0.1))
+
+# Fast-greedy community detection algorithm
+communities_fg <- cluster_fast_greedy(ingo_network_reduced)
+table(membership(communities_fg)) # the algorithm found 4 communities
+
+plot.igraph(ingo_network_reduced,
+  edge.color = "gray",
+  edge.curved = .1,
+  # Edge width: based on weight
+  edge.width = 1 + E(ingo_network)$weight / 15,
+  # Node size: based on (unweighted) degree
+  vertex.size = degree(ingo_network) / 20,
+  # Label size: based on betweenness
+  vertex.label.cex = vertex_label_cex,
+  vertex.label = V(ingo_network)$name,
+  vertex.frame.color = "#555555",
+  # Node colour based on community membership
+  vertex.color = membership(communities_fg),
+  vertex.label.color = "black",
+  margin = c(0, 0, 0, 0),
+  asp = 0,
+  layout = layout1,
+  # main = "Communities in the Network of Joint Memberships to International Organisations (2014) - Fast-Greedy Algorithm"
+)
+
+# Louvain community detection algorithm
+communities_lou <- cluster_louvain(ingo_network_reduced)
+table(membership(communities_lou)) # the algorithm found 4 communities
+
+plot.igraph(ingo_network_reduced,
+  edge.color = "gray",
+  edge.curved = .1,
+  # Edge width: based on weight
+  edge.width = 1 + E(ingo_network)$weight / 15,
+  # Node size: based on (unweighted) degree
+  vertex.size = degree(ingo_network) / 20,
+  # Label size: based on betweenness
+  vertex.label.cex = vertex_label_cex,
+  vertex.label = V(ingo_network)$name,
+  vertex.frame.color = "#555555",
+  # Node colour based on community membership
+  vertex.color = membership(communities_lou),
+  vertex.label.color = "black",
+  margin = c(0, 0, 0, 0),
+  asp = 0,
+  layout = layout1,
+  # main = "Communities in the Network of Joint Memberships to International Organisations (2014) - Louvain Algorithm"
+)
+
+# InfoMAP community detection algorithm
+communities_infomap <- cluster_infomap(ingo_network_reduced)
+table(membership(communities_infomap)) # the algorithm found 5 communities
+
+par(mfrow = c(1, 1), mai = c(0.1, 0.1, 0.1, 0.1))
+
+plot.igraph(ingo_network_reduced,
+  edge.color = "gray",
+  edge.curved = .1,
+  # Edge width: based on weight
+  edge.width = 1 + E(ingo_network)$weight / 15,
+  # Node size: based on (unweighted) degree
+  vertex.size = degree(ingo_network) / 20,
+  # Label size: based on betweenness
+  vertex.label.cex = vertex_label_cex,
+  vertex.label = V(ingo_network)$full_name,
+  vertex.frame.color = "#555555",
+  # Node colour based on community membership
+  vertex.color = membership(communities_infomap),
+  vertex.label.color = "black",
+  margin = c(0, 0, 0, 0),
+  asp = 0,
+  layout = layout1,
+  # main = "Communities in the Network of Joint Memberships to International Organisations (2014) - InfoMAP Algorithm"
+)
