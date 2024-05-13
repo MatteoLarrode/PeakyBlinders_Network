@@ -1,5 +1,9 @@
-"0","power_law_peaky
-"
+"0","degree_values <- degree(peaky_network, mode=""in"")"
+"0",""
+"0","# Fit the power law"
+"0","power_law_peaky <- fit_power_law(degree_values) "
+"0",""
+"0","power_law_peaky"
 "1","$continuous
 "
 "1","[1]"

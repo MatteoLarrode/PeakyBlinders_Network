@@ -1,0 +1,315 @@
+---
+title: "Practical 8: Exponential Random Graph Models (Part 1)"
+author: "Matteo Larrode"
+date: "2024-03-18"
+output: html_document
+---
+
+```{r include=FALSE}
+library(igraph)
+library(igraphdata)
+library(ergm)
+library(intergraph)
+```
+
+### Exercise 1: ERGM in the Friendship Network of Faculty From Four UK Universities
+
+Some of the key advantages of ERGM over classical statistical methods (regression, logistic regression etc.) are as follows. In classical methods, each observation is assumed to be independent. This assumption defies the very notion that in networks there is strong dependency between ties across the network. While some more advanced methods (such as multilevel regressions etc.) are able to accommodate some dependence in data (e.g. responses from the same cluster may be correlated), even these more advanced methods are unable to adequately address the complex dependencies in social networks. ERGM captures these network dependencies naturally and adequately.
+
+```{r}
+data(UKfaculty)
+D <- UKfaculty
+
+summary(D)
+is_directed(D)
+```
+*Note: 'Group' represents the university of the node.*
+
+```{r}
+set.seed(123)
+l <- layout_with_fr(D)
+
+plot(D,
+  asp = 0, vertex.size = 5, edge.arrow.size = 0.5,
+  vertex.color = V(D)$Group, vertex.label = V(D)$Group,
+  layout = l
+)
+```
+
+It seems like there are lots more links within unis than between unis. Additionally, University 4 has only two members, but they seem rather central in this network.
+
+#### Fitting the ERGM
+
+**Baseline model**
+
+```{r}
+# Converting D to network format
+D2 <- asNetwork(D)
+
+# Fitting the ergm with edges only
+m1 <- ergm(D2 ~ edges)
+summary(m1)
+```
+The model seems to be converged successfully (at least R did not throw in an error message). 
+
+The coefficient of edges is negative. This means that a tie is less likely to appear than 50%. In other words, ties are costly and hence rare (even if the plot looks swarmed by ties, the number of possible ties is very high (which is–as this is a directed network: n(n−1)=81×80=6480) and the number of observed ties (which is 817) is relatively low). 
+
+Let’s calculate the probability that two nodes are connected with a tie. This can be calculated as `exp(-1.93607)/(1+exp(-1.93607))` which is: 0.126. So tie probability is about 13%. 
+
+Using a simpler function:
+```{r}
+plogis(coef(m1)[["edges"]])
+```
+
+In this simple case, because there is no other parameter in the ergm apart from edges, predicted probability of a tie happens to be equal to the density of the graph:
+
+```{r}
+edge_density(D)
+```
+
+**Adding reciprocity**
+
+```{r}
+m2 <- ergm(D2 ~ edges + mutual)
+summary(m2)
+```
+
+Again, the ergm seems to have converged, so R produces the coefficients. 
+
+The positive coefficient of `mutual` is statistically highly significant (P < 0.05). This means that mutual ties are more likely to occur compared to chance. The effect of edges is now reduced further.
+
+First, a qualitative interpretation of the coefficient of mutual: a tie that reciprocates an existing tie is more likely to occur than a tie that does not reciprocate an exiting tie. We can also interpret this “mutual” effect quantitatively in two ways: 
+
+- (1) with respect to odds of a tie 
+- (2) with respect to the probability of a tie. 
+
+Let’s start with (1): the odds of a tie that reciprocates an existing tie can be found by simply exponentiating the coefficient of the mutual: `exp(coef(m2)[['mutual']]) = 22.5548678`. So the odds of a tie increase by a factor of 22 when it reciprocates an existing tie.
+
+(2) The probability of observing a tie that reciprocates an existing tie is:
+```{r}
+plogis(coef(m2)[["edges"]] + coef(m2)[["mutual"]])
+```
+
+On the other hand, if a tie is not reciprocating an existing tie, the probability that that tie occurs is only ~6%: 
+```{r}
+plogis(coef(m2)[["edges"]])
+```
+
+**Adding node characteristics: University**
+
+```{r}
+m3 <- ergm(D2 ~ edges + mutual + nodefactor("Group"))
+summary(m3)
+```
+
+Here, R created three dummy variables that indicate the three categories of the variable Group. Group 1 is now the reference category, and the coefficients for Group2, Group3, and Group4 are about the differences between the edge likelihoods compared with Group1. 
+
+For example, Group3 is much less likely to form ties than Group 1, as the coefficient for Group3 is -0.43, and it is statistically highly significant (P < 0.0001). In other words, univeristy 3 is significantly less “social” than university 1. University 1 seems to be the most social uni in fact. It makes sense as the network is denser within university 1 (as seen in the plot above). However, the difference between university 1 and university 2 regarding tie probability is small (the coefficient for Group 2 is small and statistically insignificant).
+
+**Adding homophily**
+
+```{r}
+m4 <- ergm(D2 ~ edges + mutual + nodefactor("Group") + nodematch("Group"))
+summary(m4)
+```
+
+The coefficient for the `nodematch.Group` factor is ~2, and the p-value associated with this coefficient is smaller than 0.0001. This shows that ties within group are more likely than ties between groups and this effect is statistically highly significant.
+
+As for the quantitative interpretation: the log-odds of a within-group tie are 2 points greater than that for an across-group tie. 
+
+We can exponentiate to find the multiplicative change in the odds, `exp(coef(m4)[6]) = 7.4272133`. So the odds of a tie to be formed within group is 7.4 times higher than the odds of a tie between groups. The change in the odds applies independent of the other attributes of the tie (e.g. whether or not it is reciprocal).
+
+i- Probability of a tie between two individuals in group 1 which doesn’t reciprocate an existing tie:
+```{r}
+# Probability of a link created between two nodes of university 1
+# (controlling for reciprocity)
+pi <- exp(coef(m4)[1] + coef(m4)[6]) / (1 + exp(coef(m4)[1] + coef(m4)[6]))
+print(pi)
+
+exp(-3.72 + 2.01) / (1 + exp(-3.72 + 2.01))
+```
+
+ii- Probability of a tie between an individual in group 1 and another in in group 2 which doesn’t reciprocate an existing tie:
+```{r}
+pii <- exp(coef(m4)[1] + coef(m4)[3]) / (1 + exp(coef(m4)[1] + coef(m4)[3]))
+print(pii)
+```
+
+The probability in (i) is 6.1 times larger than the probability in (ii) (0.15 vs 0.03) indicating strong homophily.
+
+*Note: Once we controlled for homophily, `nodefactor.Group.3` variable turned insignificant. So once we control for in-group tendency, Group 1 does not seem more social than Group 3.*
+
+### Exercise 2: ERGM in the SOCS0081 Network
+
+```{r}
+N <- read.csv("data/net_anon24.csv", header = TRUE)
+c <- read.csv("data/courses24.csv", header = TRUE)
+S <- read.csv("data/seminars24.csv", header = TRUE)
+
+g <- graph.data.frame(N, directed = TRUE) + vertices(25, 16, 34, 64, 99, 54, 113)
+g <- set_vertex_attr(g, "course", value = c[as.numeric((V(g)$name)), ]$course)
+g2 <- asNetwork(g)
+```
+
+**Baseline model**
+
+```{r}
+summary(mb0 <- ergm(g2 ~ edges))
+```
+
+```{r}
+# Estimating density using the model results
+plogis(mb0$coefficients[1])
+```
+
+The coefficient of the model with only edges is -3.5555. Using this estimate we can calculate the density by calculating `exp(-3.5555)/(1+exp(-3.5555))` which is done by the `plogis()` command and semi-manually too with `exp(mb0$coefficients[1])/(1+exp(mb0$coefficients[1]))`.
+
+```{r}
+edge_density(g)
+```
+
+This value is exactly the same as the density obtained with the `edge_density()` command. So, without any other terms in the model, ergm estimate simply gives a non-linear function of the density of the model, which is the baseline probability of two randomly nodes being connected.
+
+#### Testing hypotheses
+
+**Adding reciprocity, node level course, and homophily**
+
+```{r}
+mb1 <- ergm(g2 ~ edges + mutual + nodefactor("course") + nodematch("course"))
+summary(mb1)
+```
+
+The hypothesis on reciprocity is supported. The odds of a tie that reciprocates an existing tie is `exp(coef(mb1)[['mutual']]) = 69` times higher than the odds of a tie that does not reciprocate an existing tie, and the coefficient of mutual is highly statistically significant.
+
+Likewise the homophily hypothesis is supported too. The `nodematch.course` coefficient again is statistically highly significant. The odds of a within course tie is `exp(coef(mb1)[['nodematch.course']]) = 5` times higher than the odds of a between course tie.
+
+There are also significant differences between the courses. Note that the reference course here is the Other. Compared with those studying other programmes, Pols and SocSS students are significantly more likely to form a tie. Seemingly, SSDS students tend to form fewer ties than Other students, but the coefficient is not statistically significant.
+
+*Note: it is important to test homophily while controlling for reciprocity via the term `mutual`. This is because some of what we see as homophily could be due to reciprocity (if there are more ties within group, this will be amplified by a reciprocity effect, even if homophily is not very strong).*
+
+#### Some probabilites
+
+**a) SocSS -> SSDS tie without reciprocity**
+```{r}
+plogis(coef(mb1)[["edges"]] +
+  coef(mb1)[["nodefactor.course.SocSS"]] +
+  coef(mb1)[["nodefactor.course.SSDS"]])
+```
+
+**b) SocSS -> SSDS tie with reciprocity:**
+```{r}
+plogis(coef(mb1)[["edges"]] +
+  coef(mb1)[["nodefactor.course.SocSS"]] +
+  coef(mb1)[["nodefactor.course.SSDS"]] +
+  coef(mb1)[["mutual"]])
+```
+
+**c) SSDS -> SSDS without reciprocity:**
+```{r}
+plogis(coef(mb1)[["edges"]] +
+  2 * coef(mb1)[["nodefactor.course.SSDS"]] +
+  coef(mb1)[["nodematch.course"]])
+```
+
+**d) SSDS -> SSDS with reciprocity:**
+```{r}
+plogis(coef(mb1)[["edges"]] +
+  2 * coef(mb1)[["nodefactor.course.SSDS"]] +
+  coef(mb1)[["nodematch.course"]] +
+  coef(mb1)[["mutual"]])
+```
+
+#### Separating in-degree and out-degree
+
+**Test the second hypothesis above (there are differences in the probability of having a tie) both with respect to out-degree (sending a tie) and in-degree (receiving a tie), keeping the homophily term in the model.**
+
+```{r}
+mb3 <- ergm(g2 ~
+  edges +
+  mutual +
+  nodeofactor("course") +
+  nodeifactor("course") +
+  nodematch("course"))
+
+summary(m3)
+```
+
+**Test the idea that courses do not differ regarding the likelihood of receiving a tie**
+
+```{r}
+mb3a <- ergm(g2 ~
+  edges +
+  mutual +
+  nodeofactor("course") +
+  nodematch("course"))
+
+summary(mb3a)
+```
+
+With this new model, we can run a likelihood ratio testing comparing it to `mb3`. The null hypothesis is that the likelihood (model fit) do not differ between the two models (one larger model, the other simpler model embedded in the larger model)
+
+```{r}
+anova(mb3a, mb3)
+```
+
+This first `anova()` test comparing model `mb3`, which includes both out- and in-degree course effects with model `mb3a`, which includes only course effects on out-degree, returns a significant result. This means that there is enough evidence in the data that course affects the frequency of incoming ties (i.e. in-degree). 
+
+**Test the idea that courses do not differ regarding the likelihood of sending a tie**
+
+```{r}
+mb3b <- ergm(g2 ~
+  edges +
+  mutual +
+  nodeifactor("course") +
+  nodematch("course"))
+
+summary(mb3b)
+```
+
+Let's run the anova test again.
+```{r}
+anova(mb3b, mb3)
+```
+
+This second `anova()` shows an insignificant result, meaning that when we take out `nodeofactor('course')` and leave only `nodeifactor('course')`, the fit (likelihood) does not worsen significantly. In other words, course does not seem to affect out-degree significantly, but does affect in-degree. Hence, we can select the simpler model (`mb3b`) which fits data as good as the more complex model (`mb3`). 
+
+Overall, course seems to be significantly associated with in-degree (that is students from some courses get nominated significantly more than students from other courses, everything else in the model kept constant), but it is not significantly associated with out-degree (students from different courses do not seem to nominate more or less students, everything else in the model kept constant, perhaps because we limit the maximum number of nominations to five).
+
+#### Adding an interaction term
+
+**Test whether the extent of homophily varies across the four programmes.**
+
+This question can be answered by testing an interaction between `nodeifactor('course')` and `nodematch('course')`. 
+
+*Note: because we found out that outdegree is not affected by course significantly, we’ll only have the indegree course effect in the model*
+
+In this test of interaction, we will keep reciprocity effect in as well, because part of homophily could be due to reciprocity.
+
+```{r}
+mb4 <- ergm(g2 ~
+  edges +
+  mutual +
+  nodeifactor("course") +
+  nodematch("course") +
+  nodeifactor("course"):nodematch("course"))
+
+summary(mb4)
+```
+
+```{r}
+anova(mb3b, mb4)
+```
+
+The likelihood ratio test with anova() shows that we indeed find evidence that the homophily effect varies across the four programmes. 
+
+Now in the model above, the coefficient `coef(mb4)[['nodematch.course']]` refers to the homophily effect for students who are studying "Other" programmes. The interaction terms of course with nodematch show how much this homophily effect differs in those programmes vis-a-vis "Other" programmes. 
+
+For example, the homophily among SocSS students are significantly lower than that in Other students. For SocSS students, the homophily coefficient is:
+
+```{r}
+coef(mb4)[['nodematch.course']] + coef(mb4)[['nodeifactor.course.SocSS:nodematch.course']]
+```
+
+It is statistically significantly lower than `coef(mb4)[['nodematch.course']]`. 
+
+Homophily among Pols students are slightly higher than students from Other programmes, but this difference is insignificant. Likewise, students in SSDS have significantly lower homophily than students from Other programmes. Shortly, homophily varies across programmes, as SocSS and SSDS students show lower homophily than students from other programmes and than from Pols.

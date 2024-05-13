@@ -1,0 +1,3 @@
+"0","set.seed(100)"
+"0",""
+"0","peaky_ERGM4_GOF <- gof(peaky_ERGM4) "

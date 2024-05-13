@@ -1,0 +1,18 @@
+"0","# Converting peaky_network to network format"
+"0","peaky_network2 <- asNetwork(peaky_network)"
+"0",""
+"0","# Fit the ERGM models"
+"0","peaky_ERGM <- ergm(peaky_network2 ~ edges + nodefactor(""origin"") + nodematch(""origin""))"
+"2","Starting maximum pseudolikelihood estimation (MPLE):
+"
+"2","Obtaining the responsible dyads.
+"
+"2","Evaluating the predictor and response matrix.
+"
+"2","Maximizing the pseudolikelihood.
+"
+"2","Finished MPLE.
+"
+"2","Evaluating log-likelihood at the estimate. "
+"2","
+"

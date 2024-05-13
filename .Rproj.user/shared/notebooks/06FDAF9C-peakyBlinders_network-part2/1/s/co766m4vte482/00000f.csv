@@ -5,5 +5,5 @@
 "0","  set_vertex_attr(""gender_colour"", value = chr_variables$gender_colour)"
 "0",""
 "0",""
-"0","gender_membership <- as.integer(V(peaky_network)$gender)"
-"0","origin_membership <- as.integer(V(peaky_network)$origin)"
+"0","gender_membership <- as.integer(as.factor(V(peaky_network)$gender))"
+"0","origin_membership <- as.integer(as.factor(V(peaky_network)$origin))"
