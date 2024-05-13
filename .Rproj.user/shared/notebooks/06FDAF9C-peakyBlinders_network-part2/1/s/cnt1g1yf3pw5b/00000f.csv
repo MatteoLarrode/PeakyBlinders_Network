@@ -1,0 +1,239 @@
+"0","# Converting peaky_network to network format"
+"0","peaky_network2 <- asNetwork(peaky_network)"
+"0",""
+"0","# Fit the ERGM models"
+"0","# ---- ONLY EDGES ----"
+"0","peaky_ERGM1 <- ergm(peaky_network2 ~ edges)"
+"2","Starting maximum pseudolikelihood estimation (MPLE):
+"
+"2","Obtaining the responsible dyads.
+"
+"2","Evaluating the predictor and response matrix.
+"
+"2","Maximizing the pseudolikelihood.
+"
+"2","Finished MPLE.
+"
+"2","Evaluating log-likelihood at the estimate. "
+"2","
+"
+"0","# ---- ADDING TERM FOR HOMOPHILY ----"
+"0","peaky_ERGM2 <- ergm(peaky_network2 ~ edges + nodematch(""origin""))"
+"2","Starting maximum pseudolikelihood estimation (MPLE):
+"
+"2","Obtaining the responsible dyads.
+"
+"2","Evaluating the predictor and response matrix.
+"
+"2","Maximizing the pseudolikelihood.
+"
+"2","Finished MPLE.
+"
+"2","Evaluating log-likelihood at the estimate. "
+"2","
+"
+"0","# ---- ADDING DUMMY VARIABLES FOR ORIGIN OF THE NODE ----"
+"0","peaky_ERGM3 <- ergm(peaky_network2 ~ edges + nodematch(""origin"") + nodefactor(""origin""))"
+"2","Starting maximum pseudolikelihood estimation (MPLE):
+"
+"2","Obtaining the responsible dyads.
+"
+"2","Evaluating the predictor and response matrix.
+"
+"2","Maximizing the pseudolikelihood.
+"
+"2","Finished MPLE.
+"
+"2","Evaluating log-likelihood at the estimate. "
+"2","
+"
+"0","# ---- ADDING TRIADIC CLOSURE ----"
+"0","peaky_ERGM4 <-  ergm(peaky_network2 ~ edges + nodematch(""origin"") + nodefactor(""origin"") + gwesp(0.25,T) + degree(3))"
+"2","Starting maximum pseudolikelihood estimation (MPLE):
+"
+"2","Obtaining the responsible dyads.
+"
+"2","Evaluating the predictor and response matrix.
+"
+"2","Maximizing the pseudolikelihood.
+"
+"2","Finished MPLE.
+"
+"2","Starting Monte Carlo maximum likelihood estimation (MCMLE):
+"
+"2","Iteration 1 of at most 60:
+"
+"2","Optimizing with step length 0.2964.
+"
+"2","The log-likelihood improved by 2.7927.
+"
+"2","Estimating equations are not within tolerance region.
+"
+"2","Iteration 2 of at most 60:
+"
+"2","Optimizing with step length 0.5117.
+"
+"2","The log-likelihood improved by 2.4633.
+"
+"2","Estimating equations are not within tolerance region.
+"
+"2","Iteration 3 of at most 60:
+"
+"2","Optimizing with step length 0.5950.
+"
+"2","The log-likelihood improved by 1.7008.
+"
+"2","Estimating equations are not within tolerance region.
+"
+"2","Iteration 4 of at most 60:
+"
+"2","Optimizing with step length 1.0000.
+"
+"2","The log-likelihood improved by 2.5055.
+"
+"2","Estimating equations are not within tolerance region.
+"
+"2","Iteration 5 of at most 60:
+"
+"2","Optimizing with step length 1.0000.
+"
+"2","The log-likelihood improved by 0.5231.
+"
+"2","Estimating equations are not within tolerance region.
+"
+"2","Iteration 6 of at most 60:
+"
+"2","Optimizing with step length 1.0000.
+"
+"2","The log-likelihood improved by 0.1509.
+"
+"2","Estimating equations are not within tolerance region.
+"
+"2","Iteration 7 of at most 60:
+"
+"2","Optimizing with step length 1.0000.
+"
+"2","The log-likelihood improved by 0.3201.
+"
+"2","Estimating equations are not within tolerance region.
+"
+"2","Iteration 8 of at most 60:
+"
+"2","Optimizing with step length 1.0000.
+"
+"2","The log-likelihood improved by 0.9272.
+"
+"2","Estimating equations are not within tolerance region.
+"
+"2","Estimating equations did not move closer to tolerance region more than 1 time(s) in 4 steps; increasing sample size.
+"
+"2","Iteration 9 of at most 60:
+"
+"2","Optimizing with step length 0.8348.
+"
+"2","The log-likelihood improved by 1.7475.
+"
+"2","Estimating equations are not within tolerance region.
+"
+"2","Iteration 10 of at most 60:
+"
+"2","Optimizing with step length 1.0000.
+"
+"2","The log-likelihood improved by 0.7262.
+"
+"2","Estimating equations are not within tolerance region.
+"
+"2","Iteration 11 of at most 60:
+"
+"2","Optimizing with step length 1.0000.
+"
+"2","The log-likelihood improved by 0.9086.
+"
+"2","Estimating equations are not within tolerance region.
+"
+"2","Iteration 12 of at most 60:
+"
+"2","Optimizing with step length 1.0000.
+"
+"2","The log-likelihood improved by 0.2010.
+"
+"2","Estimating equations are not within tolerance region.
+"
+"2","Iteration 13 of at most 60:
+"
+"2","Optimizing with step length 1.0000.
+"
+"2","The log-likelihood improved by 0.4838.
+"
+"2","Estimating equations are not within tolerance region.
+"
+"2","Iteration 14 of at most 60:
+"
+"2","Optimizing with step length 1.0000.
+"
+"2","The log-likelihood improved by 0.1325.
+"
+"2","Estimating equations are not within tolerance region.
+"
+"2","Iteration 15 of at most 60:
+"
+"2","Optimizing with step length 1.0000.
+"
+"2","The log-likelihood improved by 0.0179.
+"
+"2","Convergence test p-value: 0.3612. "
+"2","Not converged with 99% confidence; increasing sample size.
+"
+"2","Iteration 16 of at most 60:
+"
+"2","Optimizing with step length 1.0000.
+"
+"2","The log-likelihood improved by 0.0389.
+"
+"2","Convergence test p-value: 0.2297. "
+"2","Not converged with 99% confidence; increasing sample size.
+"
+"2","Iteration 17 of at most 60:
+"
+"2","Optimizing with step length 1.0000.
+"
+"2","The log-likelihood improved by 0.0408.
+"
+"2","Convergence test p-value: 0.0003. "
+"2","Converged with 99% confidence.
+"
+"2","Finished MCMLE.
+"
+"2","Evaluating log-likelihood at the estimate. "
+"2","Fitting the dyad-independent submodel...
+"
+"2","Bridging between the dyad-independent submodel and the full model...
+"
+"2","Setting up bridge sampling...
+"
+"2","Using 16 bridges: "
+"2","1 "
+"2","2 "
+"2","3 "
+"2","4 "
+"2","5 "
+"2","6 "
+"2","7 "
+"2","8 "
+"2","9 "
+"2","10 "
+"2","11 "
+"2","12 "
+"2","13 "
+"2","14 "
+"2","15 "
+"2","16 "
+"2",".
+"
+"2","Bridging finished.
+"
+"2","
+"
+"2","This model was fit using MCMC.  To examine model diagnostics and check for
+degeneracy, use the mcmc.diagnostics() function.
+"

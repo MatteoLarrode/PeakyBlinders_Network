@@ -560,22 +560,26 @@ Had Peaky Blinders kept going after its 6 seasons, the only situation where its 
 
 ## Exponential random graph modelling (ERGM)
 
-### Definition and hypotheses
+Unlike many approaches, ERGMs adequately captures network dependencies,  whereby the existence of one link in the network can influence the existence of others. By including node- and edge-level characteristics, and structural features, ERGMs enable  adequate hypothesis testing and simulations.
 
-I formulate three hypotheses to be tested using an ERGM:
+### Hypotheses
 
-1. **H1 (Homophily): Characters from the same origin are more likely to interact amongst each other than with characters originated from elsewhere.**
+I formulate three hypotheses regarding the Peaky Blinders network to be tested using an ERGM:
+
+1. **H1 (Homophily): Characters from the same origin are more likely to interact with each other than with those from different origins**
 
 2. **H2: Characters from Birmingham have more ties than those from other origins.**
 
 Indeed, the Shelby family, focal set of characters in the series, all originate from Birmingham, and therefore concentrate a large number of ties.
 
-3. **H3: (Clustering):  **
+3. **H3: (Clustering):  There is a tendency for triadic closure, i.e., characters are more likely to interact if they share mutual connections.**
+
+Indeed, characters who appear together in shared scenes or storylines are likely to develop interconnected relationships, thus forming triangles within the network of character interactions.
 
 
 ### ERGM's
 
-```{r}
+```{r echo=FALSE, message=FALSE}
 # Converting peaky_network to network format
 peaky_network2 <- asNetwork(peaky_network)
 
@@ -608,12 +612,12 @@ Converting the negative estimate (-1.29) for the 'edges' variable in the baselin
 # H1: Homophily
 summary(peaky_ERGM2)
 
+paste0("The odds of a within-origin tie are ", round(exp(coef(peaky_ERGM2)[["nodematch.origin"]]), 3), " greater than that of a between-origin tie.")
 paste0("Probability of a tie between characters of different origins: :", plogis(coef(peaky_ERGM2)[["edges"]]))
 paste0("Probability of a tie between characters of the same origins: :", plogis(coef(peaky_ERGM2)[["edges"]] + coef(peaky_ERGM2)[["nodematch.origin"]]))
 ```
 
-Model 2 shows strong support for H1. Log-odds of within-origin ties are 1.28 greater than for between-origins.
-The 14.3% probability of a tie formed between characters of different origins increases to 37.4% when the characters share their origin. 
+Model 2 shows initial strong support for H1, with the odds of a within-origin tie 3.59 times (e^1.2767) higher than the odds of a between-origin tie. The 14.3% probability of a tie formed between characters of different origins increases to 37.4% when the characters share their origin. 
 
 ```{r}
 # H2: Characters from Birmingham are more likely to share ties with other nodes
