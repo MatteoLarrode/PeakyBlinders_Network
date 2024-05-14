@@ -661,3 +661,5 @@ peaky_ERGM4_GOF <- gof(peaky_ERGM4)
 ```{r}
 plot(peaky_ERGM4_GOF)
 ```
+
+The goodness-of-fit diagnostics for Model 4 indicate a generally strong alignment between the model's simulations and the observed network data. The box plots in the top-left panel demonstrate that most observed network statistics, including edges and triadic closure, closely align with the median of the simulations, although there are slight deviations in node-specific characteristics like origin. The top-right panel shows an excellent match in the distribution of geodesic distances, suggesting the model accurately captures how connectivity is distributed across the network. In the bottom panel, the observed degree distribution matches well with the simulations for lower degrees, but shows some discrepancies at higher degrees. Overall, these diagnostics suggest that Model 4 effectively models the network structure and dynamics of the character interactions with strengths in depicting overall connectivity and triadic closure, though it could be further refined to better capture attributes associated with specific node origins and higher degrees.
