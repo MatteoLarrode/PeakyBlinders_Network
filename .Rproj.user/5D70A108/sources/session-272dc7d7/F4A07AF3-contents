@@ -77,7 +77,7 @@ plot.igraph(peaky_network,
 Let's divide the network into three mutually exclusive subgroups depending of their city/country of origin, and their sex.
 
 ```{r}
-# Orign
+# Origin
 birmingham <- c(
   "Finn", "Arthur", "Thomas", "Freddie", "Danny", "Polly", "Ada",
   "Charlie", "John", "Curly", "Jeremiah", "Lizzie", "Michael", "Esme",

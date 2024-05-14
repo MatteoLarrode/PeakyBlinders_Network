@@ -1,0 +1,447 @@
+library(igraph)
+library(tidyverse)
+library(gridExtra)
+library(ergm)
+library(intergraph)
+library(network)
+library(knitr)
+
+peaky_df <- readRDS("data/cooccurrence_df.rds")
+
+peaky_adj_mat <- as.matrix(peaky_df)
+# no self-links
+diag(peaky_adj_mat) <- 0
+
+peaky_network <- graph_from_adjacency_matrix(peaky_adj_mat,
+  mode = "undirected",
+  weighted = TRUE
+)
+
+peaky_network <- set_vertex_attr(
+  peaky_network,
+  "name_edited",
+  value = str_to_title(str_replace_all(V(peaky_network)$name, "_", " "))
+)
+
+peaky_network
+
+set.seed(10)
+layout2 <- layout_with_kk(peaky_network)
+layout4 <- layout_with_lgl(peaky_network)
+
+plot.igraph(peaky_network,
+  edge.color = "gray",
+  edge.curved = .1,
+  edge.width = 1 + E(peaky_network)$weight / 15,
+  vertex.size = 3 + degree(peaky_network) / 3,
+  vertex.frame.color = "#555555",
+  vertex.label = V(peaky_network)$name_edited,
+  vertex.color = "#FBD87F",
+  vertex.label.color = "black",
+  vertex.label.cex = 1 + betweenness(peaky_network, weights = NA) / 1000,
+  margin = c(0, 0, 0, 0),
+  asp = 0,
+  layout = layout4,
+  main = "Network of Peaky Blinders (Seasons 1-6)"
+)
+
+# Orign
+birmingham <- c(
+  "Finn", "Arthur", "Thomas", "Freddie", "Danny", "Polly", "Ada",
+  "Charlie", "John", "Curly", "Jeremiah", "Lizzie", "Michael", "Esme",
+  "Karl", "Linda", "Aberama", "Bonnie", "Isiah", "Younger", "Erasmus",
+  "Anna", "Moss", "Ruben", "Frances", "Barney", "Billy Kimber",
+  "Johnny Dogs", "Jessie Eden", "Mrs Connors"
+)
+
+london <- c(
+  "Churchill", "May", "Alfie", "Sabini", "Mitford", "Oswald Mosley", "Sabini",
+  "Goliath", "Cyril", "Mr Levitt"
+)
+
+new_york <- c(
+  "Luca Changretta", "Jack Nelson", "Vicente", "Gina", "Mrs Changretta"
+)
+
+ireland <- c(
+  "Grace", "Campbell", "Hughes", "Laura Mckee", "Billy Grade", "Hayden Stagg"
+)
+
+russia <- c(
+  "Tatiana", "Romanov", "Izabella"
+)
+
+# Gender
+male <- c(
+  "Finn", "Arthur", "Thomas", "Churchill", "Freddie", "Danny",
+  "Charlie", "John", "Campbell", "Curly", "Younger", "Jeremiah",
+  "Erasmus", "Michael", "Moss", "Karl", "Alfie", "Sabini",
+  "Ruben", "Vicente", "Romanov", "Hughes", "Darby", "Aberama",
+  "Bonnie", "Isiah", "Goliath", "Cyril", "Chang", "Barney",
+  "Billy Kimber", "Johnny Dogs", "Luca Changretta", "Jimmy Mccavern",
+  "Oswald Mosley", "Jack Nelson", "Mr Levitt", "Billy Grade",
+  "Hayden Stagg"
+)
+
+female <- c(
+  "Polly", "Ada", "Grace", "May", "Lizzie", "Esme", "Anna",
+  "Izabella", "Frances", "Linda", "Tatiana", "Gina", "Mitford",
+  "Mrs Connors", "Laura Mckee", "Evadne Barwell", "Mrs Changretta",
+  "Jessie Eden"
+)
+
+# Create dataset
+chr_variables <- data.frame(
+  name_edited = V(peaky_network)$name_edited
+) |>
+  mutate(
+    origin = case_when(
+      name_edited %in% birmingham ~ "Birmingham",
+      name_edited %in% london ~ "London",
+      name_edited %in% new_york ~ "New York",
+      name_edited %in% ireland ~ "Ireland",
+      name_edited %in% russia ~ "Russia",
+      TRUE ~ "Other"
+    ),
+    origin_colour = case_when(
+      origin == "Birmingham" ~ "#AAF7FF",
+      origin == "London" ~ "#FFE099",
+      origin == "New York" ~ "#CCBFFF",
+      origin == "Ireland" ~ "#B2FF8C",
+      origin == "Russia" ~ "#F76D5E",
+      origin == "Other" ~ "#F2DACD"
+    ),
+    gender = case_when(
+      name_edited %in% male ~ "Male",
+      name_edited %in% female ~ "Female",
+      TRUE ~ "Unknown"
+    ),
+    gender_colour = case_when(
+      gender == "Male" ~ "#FFFBA2",
+      gender == "Female" ~ "#40B0A6",
+      TRUE ~ "grey"
+    )
+  )
+
+peaky_network <- peaky_network |>
+  set_vertex_attr("origin", value = chr_variables$origin) |>
+  set_vertex_attr("origin_colour", value = chr_variables$origin_colour) |>
+  set_vertex_attr("gender", value = chr_variables$gender) |>
+  set_vertex_attr("gender_colour", value = chr_variables$gender_colour)
+
+
+gender_membership <- as.integer(as.factor(V(peaky_network)$gender))
+origin_membership <- as.integer(as.factor(V(peaky_network)$origin))
+
+plot.igraph(peaky_network,
+  edge.color = "gray",
+  edge.curved = .1,
+  edge.width = 1 + E(peaky_network)$weight / 15,
+  vertex.size = 3 + degree(peaky_network) / 3,
+  vertex.frame.color = "#555555",
+  vertex.label = V(peaky_network)$name_edited,
+  vertex.color = V(peaky_network)$gender_colour,
+  vertex.label.color = "black",
+  vertex.label.cex = 1 + betweenness(peaky_network, weights = NA) / 1000,
+  margin = c(0, 0, 0, 0),
+  asp = 0,
+  layout = layout4,
+  main = "Network of Peaky Blinders (Seasons 1-6)"
+)
+
+legend(
+  x = -1.15, y = 0.9,
+  legend = c("Male", "Female"),
+  col = c("black", "black"),
+  pt.bg = c("#FFFBA2", "#40B0A6"), # Background color of the points
+  pch = 21, # Type of points
+  pt.cex = 3, # Size of the points
+  bty = "n", # No box
+  text.col = "black"
+)
+
+text(0.7, -1,
+  paste0("Modularity: ", round(modularity(peaky_network, membership = gender_membership), 3)),
+  cex = 1.2,
+  col = "black",
+  font = 2
+)
+
+plot.igraph(peaky_network,
+  edge.color = "gray",
+  edge.curved = .1,
+  edge.width = 1 + E(peaky_network)$weight / 15,
+  vertex.size = 3 + degree(peaky_network) / 3,
+  vertex.frame.color = "#555555",
+  vertex.label = V(peaky_network)$name_edited,
+  vertex.color = V(peaky_network)$origin_colour,
+  vertex.label.color = "black",
+  vertex.label.cex = 1 + betweenness(peaky_network, weights = NA) / 1000,
+  margin = c(0, 0, 0, 0),
+  asp = 0,
+  layout = layout4,
+  main = "Network of Peaky Blinders (Seasons 1-6)"
+)
+
+legend(
+  x = -1.2, y = 1.3,
+  legend = levels(as.factor(V(peaky_network)$origin)),
+  col = c("black", "black"),
+  pt.bg = levels(as.factor(V(peaky_network)$origin_colour)), # Background color of the points
+  pch = 21, # Type of points
+  pt.cex = 3, # Size of the points
+  bty = "n", # No box
+  text.col = "black"
+)
+
+text(0.7, -1,
+  paste0("Modularity: ", round(modularity(peaky_network, membership = origin_membership), 3)),
+  cex = 1.2,
+  col = "black",
+  font = 2
+)
+
+paste0("Modularity with respect to gender: ", modularity(peaky_network, membership = gender_membership))
+paste0("Modularity with respect to origin: ", modularity(peaky_network, membership = origin_membership))
+
+paste0(assortativity(peaky_network, closeness(peaky_network, normalized = TRUE)))
+
+set.seed(123)
+
+communities_fg <- cluster_fast_greedy(peaky_network)
+table(membership(communities_fg))
+
+plot.igraph(peaky_network,
+  edge.color = "gray",
+  edge.curved = .1,
+  edge.width = 1 + E(peaky_network)$weight / 15,
+  vertex.size = 3 + degree(peaky_network) / 3,
+  vertex.frame.color = "#555555",
+  vertex.label = V(peaky_network)$name_edited,
+  vertex.color = membership(communities_fg),
+  vertex.label.color = "black",
+  vertex.label.cex = 1 + betweenness(peaky_network, weights = NA) / 1000,
+  margin = c(0, 0, 0, 0),
+  asp = 0,
+  layout = layout4,
+)
+
+text(0.7, -1,
+  paste0("Modularity: ", round(modularity(peaky_network, membership = membership(communities_fg)), 3)),
+  cex = 1.2,
+  col = "black",
+  font = 2
+)
+
+set.seed(10)
+
+communities_lou <- cluster_louvain(peaky_network)
+table(membership(communities_lou))
+
+plot.igraph(peaky_network,
+  edge.color = "gray",
+  edge.curved = .1,
+  edge.width = 1 + E(peaky_network)$weight / 15,
+  vertex.size = 3 + degree(peaky_network) / 3,
+  vertex.frame.color = "#555555",
+  vertex.label = V(peaky_network)$name_edited,
+  vertex.color = membership(communities_lou),
+  vertex.label.color = "black",
+  vertex.label.cex = 1 + betweenness(peaky_network, weights = NA) / 1000,
+  margin = c(0, 0, 0, 0),
+  asp = 0,
+  layout = layout4,
+)
+
+text(0.7, -1,
+  paste0("Modularity: ", round(modularity(peaky_network, membership = membership(communities_lou)), 3)),
+  cex = 1.2,
+  col = "black",
+  font = 2
+)
+
+table(membership(communities_fg), membership(communities_lou))
+
+communities_infomap_unweighted <- cluster_infomap(peaky_network, e.weights = NULL)
+communities_infomap <- cluster_infomap(peaky_network)
+table(membership(communities_infomap_unweighted))
+table(membership(communities_infomap))
+
+sort(membership(communities_lou))
+
+table(V(peaky_network)$origin, membership(communities_lou))
+
+degree_data <- degree_distribution(peaky_network, cumulative = FALSE)
+cumulative_degree_data <- degree_distribution(peaky_network, cumulative = TRUE)
+
+degree_df <- data.frame(
+  degree = seq_along(degree_data) - 1,
+  probability = degree_data
+)
+
+cumulative_degree_df <- data.frame(
+  degree = seq_along(cumulative_degree_data) - 1,
+  probability = cumulative_degree_data
+)
+
+p1 <- ggplot(degree_df, aes(x = degree, y = probability)) +
+  geom_line() +
+  geom_point() +
+  labs(title = "Degree Distribution", x = "Degree", y = "p(degree)") +
+  theme_minimal()
+
+p2 <- ggplot(cumulative_degree_df, aes(x = degree, y = probability)) +
+  geom_line() +
+  geom_point() +
+  labs(title = "Cumulative Degree Distribution", x = "Degree", y = "p(degree)>x") +
+  theme_minimal()
+
+# Remove zero probability & degree for log scale
+cumulative_degree_log_df <- cumulative_degree_df[cumulative_degree_df$probability > 0 & cumulative_degree_df$degree > 0, ]
+
+log_log_cumulative_plot <- ggplot(cumulative_degree_log_df, aes(x = degree, y = probability)) +
+  geom_point() +
+  geom_line() +
+  scale_x_log10() +
+  scale_y_log10() +
+  labs(title = "Cumulative Degree Distribution \n(Log-Log)", x = "Degree (log scale)", y = "p(degree)>x (log scale)") +
+  theme_minimal()
+
+# Combining the plots side by side
+grid.arrange(p1, p2, log_log_cumulative_plot, ncol = 3)
+
+degree_values <- degree(peaky_network, mode="in")
+
+# Fit the power law
+power_law_peaky <- fit_power_law(degree_values) 
+
+power_law_peaky
+
+# ---- UNWEIGHTED DEGREE ----
+# 20% of the 57 nodes is 12 nodes
+total_connections <- sum(degree_values)
+
+# Sort nodes by degree in descending order and get the sum of degrees for the top 20%
+top_degrees <- sum(sort(degree_values, decreasing = TRUE)[1:12])
+
+# Calculate the percentage of connections these top nodes hold
+percentage_connections_held_by_top <- (top_degrees / total_connections) * 100
+
+cat("Percentage of connections held by the top 20%: ", round(percentage_connections_held_by_top, 2), "%\n")
+
+# ---- WEIGHTED DEGREE ----
+weighted_degree_values <- strength(peaky_network)
+total_weight <- sum(weighted_degree_values)
+
+# Sort nodes by weighted degree in descending order and get the sum of weighted degrees for the top 20%
+top_weights <- sum(sort(weighted_degree_values, decreasing = TRUE)[1:12])
+
+# Calculate the percentage of connections these top nodes hold
+percentage_weights_held_by_top <- (top_weights / total_weight) * 100
+
+cat("Percentage of weighted degrees held by the top 20%: ", round(percentage_weights_held_by_top, 2), "%\n")
+
+# ---- WITH ALL NODES ----
+# Calculate all shortest paths in the network
+distances <- distances(peaky_network, weights = NA)
+shortest_distances <- distances[upper.tri(distances)]
+
+# Calculate the average shortest path length
+average_path_length <- mean_distance(peaky_network, unconnected = FALSE, weights = NA)
+
+# Create a data frame of the original shortest path distances
+hist_data <- data.frame(
+  PathLengths = shortest_distances,
+  Network = "Original")
+
+# ---- REMOVING THOMAS ----
+peaky_network_modified <- delete_vertices(peaky_network, c("thomas"))
+distances_modified <- distances(peaky_network_modified, weights = NA)
+shortest_distances_modified <- distances_modified[upper.tri(distances_modified)]
+
+# Recalculate the average shortest path length in the modified network
+average_path_length_modified <- mean_distance(peaky_network_modified, unconnected = TRUE, weights = NA)
+
+hist_data_modified <- data.frame(
+  PathLengths = shortest_distances_modified,
+  Network = "Without Thomas") |> 
+  filter(is.finite(PathLengths))
+
+# Combine the data frames for original and modified networks
+combined_hist_data <- rbind(hist_data, hist_data_modified)
+
+# Plotting histograms side by side
+distances_hist <- ggplot(combined_hist_data, aes(x = PathLengths, fill = Network)) +
+  geom_bar(color = "black", position = "dodge") +
+  scale_x_continuous(breaks = seq(0, 4, by = 1)) +
+  labs(x = "Shortest Path Length", y = "Frequency") +
+  theme_minimal() +
+  theme(panel.grid.major.x = element_blank(),
+        panel.grid.minor.x = element_blank(),
+        legend.position = "None")+
+  annotate("text",
+           x = 3.6, y = 1073,
+           label = paste0("Average Path Length: ", round(average_path_length, 2)),
+           fontface = "bold",
+           col = "#f7766d",
+           size = 7) +
+  annotate("text",
+           x = 2.975, y = 883,
+           label = paste0("Average Path Length: ", round(average_path_length_modified, 2),"\n(after removing Thomas)"),
+           fontface = "bold",
+           col = "#02bfc4",
+           hjust = 0,
+           size = 7)
+
+distances_hist
+
+# Converting peaky_network to network format
+peaky_network2 <- asNetwork(peaky_network)
+
+# Fit the ERGM models
+# ---- ONLY EDGES ----
+peaky_ERGM1 <- ergm(peaky_network2 ~ edges)
+
+# ---- ADDING TERM FOR HOMOPHILY ----
+peaky_ERGM2 <- ergm(peaky_network2 ~ edges + nodematch("origin"))
+
+# ---- ADDING DUMMY VARIABLES FOR ORIGIN OF THE NODE ----
+peaky_ERGM3 <- ergm(peaky_network2 ~ edges + nodematch("origin") + nodefactor("origin"))
+
+# ---- ADDING TRIADIC CLOSURE ----
+peaky_ERGM4 <-  ergm(peaky_network2 ~ edges + nodematch("origin") + nodefactor("origin") + gwesp(0.25,T) + degree(3))
+
+summary(peaky_ERGM1)
+
+paste0("Density of the Peaky Blinders network: ", round(edge_density(peaky_network), 3))
+paste0("Probability of a tie: ", plogis(coef(peaky_ERGM1)[["edges"]]))
+
+# H1: Homophily
+summary(peaky_ERGM2)
+
+paste0("The odds of a within-origin tie are ", round(exp(coef(peaky_ERGM2)[["nodematch.origin"]]), 3), " greater than that of a between-origin tie.")
+paste0("Probability of a tie between characters of different origins: :", plogis(coef(peaky_ERGM2)[["edges"]]))
+paste0("Probability of a tie between characters of the same origins: :", plogis(coef(peaky_ERGM2)[["edges"]] + coef(peaky_ERGM2)[["nodematch.origin"]]))
+
+# H2: Characters from Birmingham are more likely to share ties with other nodes
+summary(peaky_ERGM3)
+
+h2_df <- data.frame(
+  log_odds = coef(peaky_ERGM3)[3:7]
+  ) |> 
+  mutate(
+    odds = exp(log_odds)
+  )
+
+kable(h2_df)
+
+# H3: Transitivity
+summary(peaky_ERGM4)
+
+anova(peaky_ERGM3, peaky_ERGM4)
+
+set.seed(100)
+
+peaky_ERGM4_GOF <- gof(peaky_ERGM4) 
+
+plot(peaky_ERGM4_GOF)
